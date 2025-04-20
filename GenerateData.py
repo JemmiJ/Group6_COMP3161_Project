@@ -11,7 +11,7 @@ courses = []
 enrolls = []
 Faculty = ('Science and Technology', 'Social Sciences', 'Medical Sciences')
 Science_tech = ('Biology', 'Chemistry', 'Mathematics', 'Computing', 'Biochemistry', 'Marine Biology', 'Geography', 'Physics', 'Geology')
-social_sci = ('Sociology', 'Ecomnomics', 'Psychology', 'Government')
+social_sci = ('Sociology', 'Economics', 'Psychology', 'Government')
 medical_sci = ('Pathology', 'Radiology', 'Pscychiatry', 'Gynaecology')
 Prefix = ("Introduction to ", "Advanced ", "Fundamentals of ", "Principles of ", "Applied ")
 Level = ("I", "II", " III", " IV", "V")
@@ -33,35 +33,28 @@ def generate_lecturer(max_lec):
 
 def generate_courses(c_range):
     for _ in range(c_range):
-        course_id = fake.unique.random_int()
-        faculty = random.choice(Faculty)
-        if faculty == 'Science and Technology':
-            department = random.choice(Science_tech)
-            cName = random.choice(Prefix) + department + fake.random_element(Level)
-            cCode = department[:4].upper() + str(fake.unique.random_int(min=1000, max=9999))
-            eligible = [lec[0] for lec in lecturers if [lec[3] == department]]
-            if not eligible:
-                eligible = [lec[0] for lec in lecturers]
-            lec_Id = random.choice(eligible)
-            courses.append((course_id, cName, cCode, lec_Id))
-        if faculty == 'Social Sciences':
-            department = random.choice(social_sci)
-            cName = random.choice(Prefix) + department + fake.random_element(Level)
-            cCode = department[:4].upper() + str(fake.unique.random_int(min=1000, max=9999))
-            eligible = [lec[0] for lec in lecturers if [lec[2] == department]]
-            if not eligible:
-                eligible = [lec[0] for lec in lecturers]
-            lec_Id = random.choice(eligible)
-            courses.append((course_id, cName, cCode, lec_Id))
-        if faculty == 'Medical Sciences':
-            department = random.choice(medical_sci)
-            cName = random.choice(Prefix) + department + fake.random_element(Level)
-            cCode = department[:4].upper() + str(fake.unique.random_int(min=1000, max=9999))
-            eligible = [lec[0] for lec in lecturers if [lec[2] == department]]
-            if not eligible:
-                eligible = [lec[0] for lec in lecturers]
-            lec_Id = random.choice(eligible)
-            courses.append((course_id, cName, cCode, lec_Id))
+        eligible = []
+        while not eligible:
+            course_id = fake.unique.random_int()
+            faculty = random.choice(Faculty)
+            if faculty == 'Science and Technology':
+                department = random.choice(Science_tech)
+                cName = random.choice(Prefix) + department + fake.random_element(Level)
+                cCode = department[:4].upper() + str(fake.unique.random_int(min=1000, max=9999))
+                eligible = [lec[0] for lec in lecturers if lec[3] == department]
+            if faculty == 'Social Sciences':
+                department = random.choice(social_sci)
+                cName = random.choice(Prefix) + department + fake.random_element(Level)
+                cCode = department[:4].upper() + str(fake.unique.random_int(min=1000, max=9999))
+                eligible = [lec[0] for lec in lecturers if lec[3] == department]
+            if faculty == 'Medical Sciences':
+                department = random.choice(medical_sci)
+                cName = random.choice(Prefix) + department + fake.random_element(Level)
+                cCode = department[:4].upper() + str(fake.unique.random_int(min=1000, max=9999))
+                eligible = [lec[0] for lec in lecturers if lec[3] == department]
+                
+        lec_Id = random.choice(eligible)
+        courses.append((course_id, cName, cCode, lec_Id))
     return courses
 
 def generate_course_lec():
@@ -71,7 +64,7 @@ def generate_course_lec():
 
 def generate_students(S_range):
     for _ in range(S_range):
-        stu_id = int('6201' + str(fake.random_int(min=00000,max=99999)))
+        stu_id = int('6201' + str(fake.random_int(min=10000,max=99999)))
         students.append((stu_id,fake.first_name(),fake.last_name()))
         registered_courses = random.sample(courses,5)
         for course in registered_courses:
