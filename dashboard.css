@@ -1,0 +1,20 @@
+body {
+    background:linear-gradient(to right, #43cea2, #185a9d);
+    min-height: 100vh;
+    color: #fff;
+}
+
+.dashboard-container {
+    background: #ffffffdd;
+    color: #000;
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
+    margin-bottom: 1rem;
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

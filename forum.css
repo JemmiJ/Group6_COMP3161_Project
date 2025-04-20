@@ -1,0 +1,22 @@
+body {
+    background:linear-gradient(to right, #ff512f, #dd2476);
+    min-height: 100vh;
+    color: #fff;
+}
+
+.forum-container {
+    background: #ffffffdd;
+    color: #000;
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
+    margin-bottom: 1rem;
+}
+
+.comment-container {
+    background: #ffffffdd;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    margin-top: 0.5rem;
+    margin-left: 1.5rem;
+}
