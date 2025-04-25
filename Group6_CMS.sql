@@ -3,13 +3,13 @@ USE CourseManagementSystem;
 
 CREATE TABLE CMS_Account (
 	AccID INT PRIMARY KEY AUTO_INCREMENT,
-    AccName VARCHAR(50),
     AccPassword VARCHAR(512)
-);
+)AUTO_INCREMENT = 62000;
 
 CREATE TABLE CMS_Admin (
 	AdminID INT PRIMARY KEY,
-    AdminName VARCHAR(255)
+    AdminName VARCHAR(255),
+    AdminPassword VARCHAR(512)
 );
 
 CREATE TABLE CMS_Students (
@@ -68,26 +68,9 @@ CREATE TABLE CMS_Teaches (
     ON DELETE CASCADE
 );
 
-CREATE TABLE  CMS_Student_Account (
-	StudAccName INT,
-    StudentPassword VARCHAR(512),
-    
-    FOREIGN KEY(StudAccName)
-    REFERENCES CMS_Students(StudID)
-    ON DELETE CASCADE
-);
-
-CREATE TABLE  CMS_Lecturer_Account (
-	LecAccName INT,
-    LecturerPassword VARCHAR(512),
-    
-    FOREIGN KEY(LecAccName)
-    REFERENCES CMS_Lecturers(LecID)
-    ON DELETE CASCADE
-);
 
 CREATE TABLE CMS_Events(
-	eventID INT AUTO_INCREMENT PRIMARY KEY,
+	eventID INT PRIMARY KEY AUTO_INCREMENT,
     CourseID INT,
     eventDate DATETIME,
     eventDescription TEXT,
@@ -98,7 +81,7 @@ CREATE TABLE CMS_Events(
 );
 
 CREATE TABLE CMS_CourseContent (
-	ContentId INT AUTO_INCREMENT PRIMARY KEY,
+	ContentId INT PRIMARY KEY AUTO_INCREMENT,
     CourseID INT,
     section VARCHAR(100) NOT NULL,
     content TEXT,
@@ -167,7 +150,7 @@ CREATE TABLE CMS_Threads (
 );
 
 CREATE TABLE CMS_Comments (
-	commentID INT AUTO_INCREMENT PRIMARY KEY,
+	commentID INT PRIMARY KEY AUTO_INCREMENT,
     ThreadID INT,
     AuthorID INT,
     Content TEXT,
