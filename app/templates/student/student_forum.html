@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>CMS|Student Forum</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="../student/student.js" defer></script>
+    </head>
+    <body>
+        <div>
+            <h3>Forum Discussions</h3>
+
+            <form id="new-thread-form" class="mb-4">
+                <input type="text" id="thread-title" class="form-control mb-2" placeholder="Thread title" required>
+                <textarea id="thread-content" class="form-control mb-2" rows="5" required></textarea>
+                <button class="btn btn-success">Post</button>
+            </form>
+            
+            <div id="forum-threads"></div>
+        </div>
+    </body>
+</html>

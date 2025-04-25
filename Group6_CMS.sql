@@ -3,7 +3,7 @@ USE CourseManagementSystem;
 
 CREATE TABLE CMS_Account (
 	AccID INT PRIMARY KEY AUTO_INCREMENT,
-    AccName INT,
+    AccName VARCHAR(50),
     AccPassword VARCHAR(512)
 );
 
