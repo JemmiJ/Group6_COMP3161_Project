@@ -15,7 +15,7 @@ CREATE TABLE CMS_Admin (
 CREATE TABLE CMS_Students (
 	StudID INT PRIMARY KEY,
     FirstName VARCHAR(50),
-    LastName VARCHAR(100)
+    LastName VARCHAR(100),
 );
 
 CREATE TABLE CMS_Lecturers (

@@ -1,0 +1,50 @@
+-- User Login
+SELECT * FROM CMS_Account WHERE AccName = [u_input];
+SELECT * FROM CMS_Account WHERE AccPassword = [p_input];
+
+-- User Sign up 
+INSERT INTO CMS_Account (AccID, AccName, AccPassword) VALUES ([user_id], [username], [password]);
+INSERT INTO CMS_Students (StudID, FirstName, LastName) VALUES ([student_id], '[first_name]', '[last_name]');
+
+-- Create a Course (updated for new schema)
+INSERT INTO CMS_Courses (CID, CName, CCode, CDepartment, LecID) 
+VALUES ([course_id], '[course_name]', '[course_code]', '[department]', [lecturer_id]);
+
+-- Retrieve all Courses 
+SELECT * FROM CMS_Courses;
+
+-- Register For Course
+INSERT INTO CMS_Enrolment (StudID, CID) VALUES ([student_id], [course_id]);
+
+-- Retrieve Members 
+SELECT s.StudID, s.FirstName, s.LastName 
+FROM CMS_Enrolment e 
+JOIN CMS_Students s ON e.StudID = s.StudID 
+WHERE e.CID = [input_cid];
+
+-- Forum-related queries
+-- Create Forum
+INSERT INTO CMS_Forums (ForumID, ForumCourseID, ForumName) 
+VALUES ([forum_id], [course_id], '[forum_name]');
+
+-- Retrieve Forums for a Course
+SELECT * FROM CMS_Forums WHERE ForumCourseID = [course_id];
+
+-- Other stuff in case of anything
+
+-- Get all courses taught by a lecturer
+SELECT c.* FROM CMS_Courses c
+JOIN CMS_Lecturers l ON c.LecID = l.LecID
+WHERE l.LecID = [lecturer_id];
+
+-- Get student grades
+SELECT c.CName, e.Grade 
+FROM CMS_Enrolment e
+JOIN CMS_Courses c ON e.CID = c.CID
+WHERE e.StudID = [student_id];
+
+-- Get all students in a department
+SELECT s.* FROM CMS_Students s
+JOIN CMS_Enrolment e ON s.StudID = e.StudID
+JOIN CMS_Courses c ON e.CID = c.CID
+WHERE c.CDepartment = '[department_name]';
