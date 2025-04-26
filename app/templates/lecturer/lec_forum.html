@@ -2,25 +2,23 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>CMS|Lecturer Dashboard</title>
+        <title>CMS|Forum Manager</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <script src="../lecturer/lecturer.js" defer></script>
     </head>
-    <body onload="checkAuth('Lecturer')">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand">CMS Student Dashboard</a>
-                <div>
-                    <a href="lec_assignments.html" class="btn btn-light me-2">Assignments</a>
-                    <a href="lec_content.html" class="btn btn-light me-2">Content</a>
-                    <a href="lec_forum.html" class="btn btn-light">Forum</a>
-                    <button class="btn btn-outline=danger ms-3" onclick="logout()">Logout</button>
-                </div>
-            </div>
-        </nav>
+    <body onload="loadLecturerForums()">
 
         <div class="container mt-4">
-            <h2>Welcome back, Lecturer!</h2>
+          <h3>Manage Forums</h3>
+        
+          <form id="new-forum-form" class="mb-4">
+            <input type="text" id="forum-name" class="form-control mb-2" placeholder="Forum Name" required>
+            <select id="forum-course" class="form-select mb-2"></select>
+            <button class="btn btn-success">Create Forum</button>
+          </form>
+        
+          <div id="forum-list"></div>
         </div>
-    </body>
-</html>
+        
+     </body>
+ </html>
