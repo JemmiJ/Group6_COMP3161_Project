@@ -5,7 +5,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
 from flask_bcrypt import Bcrypt 
-from app.forms import LoginForm, RegisterForm, CourseForm
+from app.forms import LoginForm, RegisterForm, CourseForm,RegisterCourse
 import jwt, datetime,json
 from app.utils import token_required
 from db import connectDB
@@ -170,6 +170,7 @@ def get_student_courses(student_id):
 
 @app_views.route("/api/courses/<lecturer_id>", methods=['POST'])
 def get_lecturer_courses(lecturer_id):
+    """Retrieves a list of courses taught by a lecturer."""
     if request.method =='POST':
         try:
             db_connect = connectDB()
@@ -195,3 +196,96 @@ def get_lecturer_courses(lecturer_id):
         except Exception as err:
             print({"Error": err})  
 
+
+@app_views.route("/api/course/<course_id>", methods=["POST"])
+def get_course_members(course_id):
+    """This function retrieves a list of students and lecturers enrolled in a course.
+"""
+    if request.method=="POST":
+        try:
+            db_connect = connectDB()
+            cursor = db_connect.cursor()
+            members_query = "SELECT FirstName ,LastName FROM CMS_Students  \
+            INNER JOIN CMS_Enrolment on CMS_Students.StudID=CMS_Enrolment.StudID\
+            INNER JOIN CMS_Courses on CMS_Enrolment.CID=CMS_Courses.CID \
+            WHERE CMS_Courses.CID=%s\
+            UNION SELECT LFirstName ,LLastname FROM CMS_Lecturers\
+            INNER JOIN CMS_Teaches on CMS_Lecturers.LecID=CMS_Teaches.LecID \
+            INNER JOIN CMS_Courses on CMS_Teaches.CID= CMS_Courses.CID \
+            WHERE CMS_Courses.CID=%s"
+            cursor.execute(members_query, (course_id, course_id))
+
+            names_lst = []
+            for first_name, last_name in cursor:
+                name = {}
+                name['Full_name'] = (first_name, last_name)
+                names_lst.append(name)
+            cursor.close()
+            db_connect.close()
+            return json.dumps(names_lst, sort_keys=False)
+            
+        except Exception as err:
+            print({"Error": err})
+
+@app_views.route("/api/register/course/<student_id>", methods=["POST"])
+def register_course(student_id):
+    """
+    Registers a student for a course.
+    """
+    if request.method == "POST":
+        form = RegisterCourse()
+        if form.validate_on_submit():
+            try:
+                db_connect = connectDB()
+                cursor = db_connect.cursor()
+                course = form.course.data
+                course_code, course_name = course.split()
+                select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
+                cursor.execute(select_query, (course_code, course_name))
+                course_id = cursor.fetchone()
+                insert_course = "INSERT INTO CMS_Enrolment(StudID, CID) VALUES(%s, %s)"
+                cursor.execute(insert_course,(student_id, course_id) )
+                cursor.close()
+                db_connect.close()
+            except Exception as err:
+                  print({"Error": err})
+    pass
+
+
+@app_views.route("/calender_event/<course_id>", methods="POST")
+def get_calender_events(course_id):
+    if request.method =="POST":
+        try:
+            db_connect = connectDB()
+            cursor = db_connect.cursor()
+
+            calender_query = "SELECT * FROM CMS_Events WHERE CourseID =%s"
+            cursor.execute(calender_query, (course_id))
+            event_lst= []
+            for event_ID, course_ID, event_Date, event_Description in cursor:
+                event = {}
+                event["eventID"] = event_ID
+                event["CourseID"] = course_ID
+                event["eventDate"] = event_Date
+                event['eventDescription'] = event_Description
+                event_lst.append(event)
+            cursor.close()
+            db_connect.close()
+            return json.dumps(event_lst, sort_keys=False)
+        except Exception as err:
+            print({"Error":err})
+
+@app_views.route("/calender_event/<calender_date>/<student_id>", methods="GET")
+def get_student_events(calender_date,student_id):
+    if request.method =="GET":
+        try:
+            db_connect = connectDB()
+            students_events = "SELECT * from CMS_Events INNER JOIN CMS_Enrolment CMS_Events.CourseID=CMS_Enrolment.CID \
+                WHERE CMS_Enrolment.StudID = %s AND CMS_Events.eventDate = %s"
+            cursor = db_connect.cursor()
+            cursor.execute(students_events, (student_id, calender_date))
+            events = cursor.fetchall()
+            return jsonify(events)
+        
+        except Exception as err:
+            return jsonify({"Error":str(e)})

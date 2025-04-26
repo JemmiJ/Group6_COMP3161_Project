@@ -31,14 +31,28 @@ class CourseForm(FlaskForm):
             return lecturer_lst
         except Exception as err:
             print({"Error": err})
-    pass
-
     course_code =  StringField("Course_code", validators=[InputRequired()])
     course_name = StringField("Course_name", validators=[InputRequired()])
     department = SelectField("Department", choices=[("Science and Technology"), ('Social Sciences'), ('Medical Sciences')])
     lecturer = SelectField("Lecturer", choices=[get_lecturers()])
     submit = SubmitField("Create course")
     pass
+
+class RegisterCourse(FlaskForm):
+    def get_courses():
+        try:
+            db_connect= connectDB()
+            cursor =  db_connect.cursor()
+            course_query = "SELECT CCode, CName FROM CMS_Courses"
+            cursor.execute(course_query)
+            courses = cursor.fetchall()
+            course_lst = [f"{course[0]} {course[1]}"for course in courses]
+            return course_lst
+        except Exception as err:
+            print({"Error": err})
+    
+    course = SelectField("Course", choices=[get_courses()])
+    submit = SubmitField("Register course")
 
 
 
