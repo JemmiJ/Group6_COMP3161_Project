@@ -16,6 +16,7 @@ itsdangerous
 Jinja2
 Mako
 MarkupSafe
+flask_bcrypt
 packaging
 psycopg2
 pymysql 

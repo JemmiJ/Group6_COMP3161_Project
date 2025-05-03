@@ -12,7 +12,7 @@ function checkAuth(role = "Admin") {
     window.location.href = "../index.html";
   }
   
-  // 📊 Dashboard Stats
+
   function loadAdminStats() {
     checkAuth("Admin");
   
@@ -30,7 +30,7 @@ function checkAuth(role = "Admin") {
       });
   }
   
-  // 📚 Load lecturers for course creation
+
   function loadLecturersForCourseForm() {
     checkAuth("Admin");
   
@@ -70,7 +70,7 @@ function checkAuth(role = "Admin") {
     };
   }
   
-  // 👥 Load all users
+
   function loadAllUsers() {
     checkAuth("Admin");
   

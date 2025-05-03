@@ -1,6 +1,6 @@
 import os
 from app import app, login_manager
-from flask import Blueprint, render_template, request, redirect, jsonify,url_for
+from flask import render_template, request, redirect, jsonify,url_for, flash
 from flask_login import login_user, login_required, logout_user
 from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
@@ -11,8 +11,6 @@ import jwt, datetime
 from app.utils import token_required
 
 
-
-app_views = Blueprint('app_views', __name__)
 bcrypt = Bcrypt(app) 
 
 def connectDB():
@@ -25,7 +23,7 @@ def connectDB():
     )
 
 
-@app_views.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def user_login():
     form = LoginForm()
     db = connectDB()
@@ -45,12 +43,12 @@ def user_login():
                 flash('Invalid username or password', 'fail')
         else:
             flash('User not found', 'fail')
-    return render_template('login.html', form=form)
+    return render_template('login/login.html', form=form)
 
 
 
 
-@app_views.route('/register', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def user_register():
     try:
         form = RegisterForm()
@@ -77,7 +75,7 @@ def user_register():
 
             db.commit()
             return redirect(url_for('user_login'))
-        return render_template('signup.html', form=form)
+        return render_template('signup/signup.html', form=form)
     except Exception as err:
         print({"Error": err})
 
