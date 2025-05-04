@@ -26,7 +26,7 @@ CREATE TABLE CMS_Lecturers (
 );
 
 CREATE TABLE CMS_Courses (
-	CID INT PRIMARY KEY,
+	CID INT PRIMARY KEY AUTO_INCREMENT,
     CName VARCHAR(255),
     CCode VARCHAR(50),
     CDepartment VARCHAR(50),
@@ -40,7 +40,6 @@ CREATE TABLE CMS_Courses (
 CREATE TABLE CMS_Enrolment (
 	StudID INT,
     CID INT,
-    Grade VARCHAR(5),
     
     PRIMARY KEY(StudID, CID),
     
