@@ -1,3 +1,4 @@
+{% extend base.html %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -7,10 +8,12 @@
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="login.css">
     </head>
+
     <body>
         <div class="login-container">
             <h1 class="login-title">Welcome, Please login</h1>
             <form id="loginForm">
+                {{ form.csrf_token }}
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
                     <input type="text" class="form-control" id="username" required>
