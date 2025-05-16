@@ -5,6 +5,8 @@ fake = Faker()
 max_lecturers = 50
 max_courses = 200
 max_students = 100000
+next_AccID = 62000
+accounts = []
 students= []
 lecturers = []
 courses = []
@@ -18,7 +20,7 @@ Level = (" I", " II", " III", " IV", " V")
 
 def generate_lecturer(max_lec):
     for _ in range(max_lec):
-        lec_id = fake.random_int(min=000000,max=999999)
+        lec_id = fake.unique.random_int() ## Gets the ID from the ID, Password tuple
         faculty = random.choice(Faculty)
         if faculty == 'Science and Technology':
             department = random.choice(Science_tech)
@@ -63,8 +65,11 @@ def generate_course_lec():
         lecturer_courses[course[3]].append(course[0])
 
 def generate_students(S_range):
+    next_AccID = 62000
     for _ in range(S_range):
-        stu_id = int('6201' + str(fake.random_int(min=10000,max=99999)))
+        AccID = next_AccID
+        next_AccID += 1
+        stu_id = AccID
         students.append((stu_id,fake.first_name(),fake.last_name()))
         registered_courses = random.sample(courses,5)
         for course in registered_courses:
@@ -72,9 +77,32 @@ def generate_students(S_range):
             enrolls.append((stu_id, course[0], grade))
     return students, enrolls
 
+def generate_accounts():
+    global accounts, next_AccID  # <- Add this line
+
+    passwordlst = set()  # Moved outside the loop to prevent it resetting each iteration
+    for _ in range(max_students):
+        AccID = next_AccID
+        next_AccID += 1
+        
+        # Generate a unique password
+        AccPassword = fake.word().capitalize()
+        while len(AccPassword) < 8 or AccPassword in passwordlst:
+            AccPassword = fake.word().capitalize()
+        
+        passwordlst.add(AccPassword)
+        accounts.append((AccID, AccPassword))
+    
+    return accounts
+
+
+
 def SQL_storage():
     
     with open("Group6_GenerationFile.sql", 'w') as f:
+        f.write("INSERT INTO CMS_Account (AccID, AccPassword) VALUES\n")
+        f.write(",\n".join([str(tuple(account)) for account in accounts]) + ";\n\n")
+
         f.write("INSERT INTO CMS_Students (StudID, FirstName, LastName) VALUES\n")
         f.write(",\n".join([str(tuple(student)) for student in students]) + ";\n\n")
 
@@ -87,15 +115,10 @@ def SQL_storage():
         f.write("INSERT INTO CMS_Enrolment (StudID, CID, Grade) VALUES\n")
         f.write(",\n".join([str(tuple(enrol)) for enrol in enrolls]) + ";\n\n")
     print("Data File Generated Successfully")
-
-        
-
-def main():
+     
+if __name__ == "__main__":
     generate_lecturer(max_lecturers)
     generate_courses(max_courses)
     generate_course_lec()
     generate_students(max_students)
     SQL_storage()
-
-if __name__ == "__main__":
-    main()
