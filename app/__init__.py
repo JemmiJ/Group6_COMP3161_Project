@@ -16,7 +16,7 @@ app.config.from_object(Config)
 
 jwt.init_app(app)
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'app_views.login'
 
 class User(UserMixin):
     def __init__(self, user_id, role):

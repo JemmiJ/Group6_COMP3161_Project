@@ -21,36 +21,37 @@ def login():
     form = LoginForm()
     if request.method == 'POST' and form.validate_on_submit():
         db = connectDB()
-        cursor = db.cursor(dictionary=True)
+        cursor = db.cursor()
         user_id = form.user_id.data
         password = form.password.data
         
-        cursor.execute("SELECT * FROM CMS_Account WHERE AccID = %s", (user_id,))
+        
+        query = "SELECT * FROM CMS_Account WHERE AccID = %s"
+        cursor.execute(query, (user_id))
         account = cursor.fetchone()
+        acc_id, pass_hash = account
+        print(acc_id, pass_hash)
 
-        if account and check_password_hash(account['AccPassword'], password):
-            session['user_id'] = account['AccID']
+        if acc_id and check_password_hash(pass_hash, password):
+            session['user_id'] = acc_id
             # Determine user role
-            cursor.execute("SELECT * FROM CMS_Students WHERE StudID = %s", (user_id,))
-            if cursor.fetchone():
-                session['role'] = 'student'
-                return redirect(url_for('app_views.student_dashboard'))
+            print("User role:", session['role'])
+            if session['role'] == 'student':
+                print("Redirecting to student dashboard...")
+                session['logged_in'] = True
+                return jsonify({"Success": 200, "message": "Login successful."})
+            
+            if session['role'] == 'lecturer':
+                session['logged_in'] = True
+                return jsonify({"Success": 200, "message": "Login successful."})
 
-            cursor.execute("SELECT * FROM CMS_Lecturers WHERE LecID = %s", (user_id,))
-            if cursor.fetchone():
-                session['role'] = 'lecturer'
-                return redirect(url_for('app_views.lec_dashboard'))
-
-            cursor.execute("SELECT * FROM CMS_Admin WHERE AdminID = %s", (user_id,))
-            if cursor.fetchone():
-                session['role'] = 'admin'
-                return redirect(url_for('app_views.admin_dashboard'))
-
-            flash("User role not found.", "danger")
+            if session['role'] == 'admin':
+                session['logged_in'] = True
+                return jsonify({"Success": 200, "message": "Login successful."})
+            return jsonify({"Error": 401, "message:": "Not authorized."})
         else:
-            flash("Invalid login credentials.", "danger")
-
-    return render_template('login.html', form=form)
+            return jsonify({"Error": 400,"message": "Invalid credentials."})
+    return jsonify({"Error": 400, "message": "Login failed."})
 
 
 
@@ -82,10 +83,8 @@ def register():
                            (user_id, first_name + ' ' + last_name, password))
 
         db.commit()
-        flash("Account created successfully. Please log in.", "success")
-        return redirect(url_for('app_views.login'))
-
-    return render_template('signup.html', form=form)
+        return jsonify({"Succces":201, "message":"Account created successfully"}) 
+    return jsonify({"Error":400, "message":"Account creation failed"})
 
 
 @app_views.route('/logout')
@@ -213,10 +212,10 @@ def register_course():
             course_id = result[0]
             cursor.execute("INSERT INTO CMS_Enrolment (StudID, CID) VALUES (%s, %s)", (student_id, course_id))
             db.commit()
-            flash("Registered for course successfully.", "success")
+            return jsonify({"Success": 200, "message": "Course registered successfully."})
         except Exception as e:
-            flash(f"Error: {e}", "danger")
-    return render_template('register_course.html', form=form)
+            return jsonify({"Error": 400, "message": f"Error: {e}"})
+    return jsonify({"Error": 400, "message": "Course registration failed."})
 
 @app_views.route('/calendar/<int:course_id>')
 @login_required

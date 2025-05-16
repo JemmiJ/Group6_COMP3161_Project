@@ -56,13 +56,13 @@ def generate_courses(c_range):
                 eligible = [lec[0] for lec in lecturers if lec[3] == department]
                 
         lec_Id = random.choice(eligible)
-        courses.append((course_id, cName, cCode, lec_Id))
+        courses.append((course_id, cName, cCode, department, lec_Id))
     return courses
 
 def generate_course_lec():
     lecturer_courses = {lec[0] : [] for lec in lecturers}
     for course in courses:
-        lecturer_courses[course[3]].append(course[0])
+        lecturer_courses[course[4]].append(course[0])
 
 def generate_students(S_range):
     next_AccID = 62000
@@ -112,11 +112,11 @@ def SQL_storage():
         f.write("INSERT INTO CMS_Students (StudID, FirstName, LastName) VALUES\n")
         f.write(",\n".join([str(tuple(student)) for student in students]) + ";\n\n")
 
-        f.write("INSERT INTO CMS_CourseS (CID, CName, CCode, CDepartment, LecID) VALUES\n")
-        f.write(",\n".join([str(tuple(course)) for course in courses]) + ";\n\n")
-
         f.write("INSERT INTO CMS_Lecturers (LecID, LFirstName, LLastName, Department) VALUES\n")
         f.write(",\n".join([str(tuple(lec)) for lec in lecturers]) + ";\n\n")
+
+        f.write("INSERT INTO CMS_CourseS (CID, CName, CCode, CDepartment, LecID) VALUES\n")
+        f.write(",\n".join([str(tuple(course)) for course in courses]) + ";\n\n")
 
         f.write("INSERT INTO CMS_Enrolment (StudID, CID, Grade) VALUES\n")
         f.write(",\n".join([str(tuple(enrol)) for enrol in enrolls]) + ";\n\n")
