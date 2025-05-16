@@ -5,6 +5,7 @@ fake = Faker()
 max_lecturers = 50
 max_courses = 200
 max_students = 100000
+next_AccID = 62000
 students= []
 lecturers = []
 courses = []
@@ -18,7 +19,7 @@ Level = (" I", " II", " III", " IV", " V")
 
 def generate_lecturer(max_lec):
     for _ in range(max_lec):
-        lec_id = fake.random_int(min=000000,max=999999)
+        lec_id = generate_accounts()[0] ## Gets the ID from the ID, Password tuple
         faculty = random.choice(Faculty)
         if faculty == 'Science and Technology':
             department = random.choice(Science_tech)
@@ -64,13 +65,21 @@ def generate_course_lec():
 
 def generate_students(S_range):
     for _ in range(S_range):
-        stu_id = int('6201' + str(fake.random_int(min=10000,max=99999)))
+        stu_id = generate_accounts()[0]
         students.append((stu_id,fake.first_name(),fake.last_name()))
         registered_courses = random.sample(courses,5)
         for course in registered_courses:
             grade = random.randint(50, 100)
             enrolls.append((stu_id, course[0], grade))
     return students, enrolls
+
+def generate_accounts(): ## Every Student and Lecturer has an account, this keeps the IDs identical between the user and the account
+        global next_AccID
+        AccID = next_AccID
+        next_AccID += 1
+        AccPassword = "Password123"  ## Add Password Generation Here; 
+        return [AccID, AccPassword]
+
 
 def SQL_storage():
     
@@ -87,15 +96,10 @@ def SQL_storage():
         f.write("INSERT INTO CMS_Enrolment (StudID, CID, Grade) VALUES\n")
         f.write(",\n".join([str(tuple(enrol)) for enrol in enrolls]) + ";\n\n")
     print("Data File Generated Successfully")
-
-        
-
-def main():
+     
+if __name__ == "__main__":
     generate_lecturer(max_lecturers)
     generate_courses(max_courses)
     generate_course_lec()
     generate_students(max_students)
     SQL_storage()
-
-if __name__ == "__main__":
-    main()
