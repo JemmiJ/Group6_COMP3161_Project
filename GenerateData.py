@@ -78,27 +78,33 @@ def generate_students(S_range):
     return students, enrolls
 
 def generate_accounts():
-    global accounts, next_AccID  # <- Add this line
-
-    passwordlst = set()  # Moved outside the loop to prevent it resetting each iteration
-    for _ in range(max_students):
-        AccID = next_AccID
-        next_AccID += 1
-        
-        # Generate a unique password
-        AccPassword = fake.word().capitalize()
-        while len(AccPassword) < 8 or AccPassword in passwordlst:
-            AccPassword = fake.word().capitalize()
-        
-        passwordlst.add(AccPassword)
+    next_AccID = 62000  # Starting Account ID
+    global accounts
+    accounts = []  # Initialize accounts list
+    # Generate candidate passwords - generate twice as many to increase chances of unique long passwords
+    candidate_passwords = [fake.password(length=10) for _ in range(max_students * 2)]
+    # Filter passwords: length >= 8 and unique
+    filtered_passwords = []
+    seen_passwords = set()
+    for pwd in candidate_passwords:
+        pwd_cap = pwd.capitalize()
+        if len(pwd_cap) >= 8 and pwd_cap not in seen_passwords:
+            seen_passwords.add(pwd_cap)
+            filtered_passwords.append(pwd_cap)
+        if len(filtered_passwords) == max_students:
+            break
+    # Create accounts pairing IDs and passwords
+    for i in range(max_students):
+        AccID = next_AccID + i
+        AccPassword = filtered_passwords[i]
         accounts.append((AccID, AccPassword))
-    
     return accounts
 
 
 
 def SQL_storage():
-    
+    word = fake.word().capitalize()
+    print("Fake Word:", word)
     with open("Group6_GenerationFile.sql", 'w') as f:
         f.write("INSERT INTO CMS_Account (AccID, AccPassword) VALUES\n")
         f.write(",\n".join([str(tuple(account)) for account in accounts]) + ";\n\n")
@@ -121,4 +127,5 @@ if __name__ == "__main__":
     generate_courses(max_courses)
     generate_course_lec()
     generate_students(max_students)
+    generate_accounts()
     SQL_storage()
