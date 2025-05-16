@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Create Event{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container col-md-8 offset-md-2">
+  <h3 class="text-center mb-4">Add Calendar Event</h3>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.course.label(class="form-label") }}
+      {{ form.course(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.event_date.label(class="form-label") }}
+      {{ form.event_date(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.event_description.label(class="form-label") }}
+      {{ form.event_description(class="form-control", rows=4) }}
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Create Event</button>
+  </form>
+</div>
+<p><a href="{{ url_for('app_views.lec_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}

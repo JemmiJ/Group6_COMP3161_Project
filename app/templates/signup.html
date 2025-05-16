@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Sign Up - Course Management System{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<script src="{{ url_for('static', filename='js/signup.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="container col-md-6 offset-md-3">
+  <h2 class="text-center mb-4">Sign Up</h2>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.user_id.label(class="form-label") }}
+      {{ form.user_id(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.first_name.label(class="form-label") }}
+      {{ form.first_name(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.last_name.label(class="form-label") }}
+      {{ form.last_name(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.password.label(class="form-label") }}
+      {{ form.password(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      <label for="role" class="form-label">Role</label>
+      <select name="role" class="form-select" required>
+        <option value="">Select Role</option>
+        <option value="student">Student</option>
+        <option value="lecturer">Lecturer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="mb-3" id="department-group" style="display:none;">
+      <label for="department" class="form-label">Department (Lecturer Only)</label>
+      <input type="text" name="department" class="form-control">
+    </div>
+    <button type="submit" class="btn btn-success w-100">Register</button>
+    <div class="mt-3 text-center">
+      <a href="{{ url_for('app_views.login') }}">Already have an account? Login</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.querySelector('select[name="role"]').addEventListener("change", function() {
+    const dept = document.getElementById("department-group");
+    dept.style.display = this.value === "lecturer" ? "block" : "none";
+  });
+</script>
+{% endblock %}

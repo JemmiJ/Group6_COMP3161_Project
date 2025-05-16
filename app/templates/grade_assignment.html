@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Grade Assignment{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container col-md-8 offset-md-2">
+  <h3 class="text-center mb-4">Grade Student Assignment</h3>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.assignment.label(class="form-label") }}
+      {{ form.assignment(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.student_id.label(class="form-label") }}
+      {{ form.student_id(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.grade.label(class="form-label") }}
+      {{ form.grade(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.feedback.label(class="form-label") }}
+      {{ form.feedback(class="form-control", rows="4") }}
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Submit Grade</button>
+  </form>
+</div>
+<p><a href="{{ url_for('app_views.lec_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}

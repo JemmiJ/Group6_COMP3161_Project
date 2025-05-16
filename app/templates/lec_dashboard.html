@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Lecturer Dashboard{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<script src="{{ url_for('static', filename='js/lecturer.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+{% include 'flash_messages.html' %}
+<div class="container text-center">
+  <h2 class="mb-4">Welcome, Lecturer!</h2>
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <a href="{{ url_for('app_views.lecturer_courses') }}" class="btn btn-outline-primary w-100 mb-3">My Courses</a>
+      <a href="{{ url_for('app_views.create_assignment') }}" class="btn btn-outline-success w-100 mb-3">Create Assignment</a>
+      <a href="{{ url_for('app_views.grade_assignment') }}" class="btn btn-outline-warning w-100">Grade Assignment</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

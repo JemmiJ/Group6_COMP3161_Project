@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}All Courses{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">All Available Courses</h2>
+
+  {% include 'flash_messages.html' %}
+
+  {% if courses %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Department</th>
+          <th>Lecturer ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in courses %}
+        <tr>
+          <td>{{ course.CCode }}</td>
+          <td>{{ course.CName }}</td>
+          <td>{{ course.CDepartment }}</td>
+          <td>{{ course.LecID }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="alert alert-info">No courses available at this time.</div>
+  {% endif %}
+
+  <a href="{{ url_for('app_views.student_dashboard') }}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+{% endblock %}

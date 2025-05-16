@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Threads in Forum {{ forum_id }}</h2>
+
+{% include 'flash_messages.html' %}
+
+{% if threads %}
+<ul>
+    {% for thread in threads %}
+        <li>
+            <a href="{{ url_for('forums.view_threads', forum_id=forum_id) }}">{{ thread.Title }}</a><br>
+            <small>{{ thread.Content[:100] }}{% if thread.Content|length > 100 %}...{% endif %}</small>
+        </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No threads found in this forum.</p>
+{% endif %}
+
+<p><a href="{{ url_for('forums.create_thread') }}"> Create New Thread</a></p>
+<p><a href="{{ url_for('forums.view_forums', course_id=1) }}">Back to Forums</a></p>
+{% endblock %}

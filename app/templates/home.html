@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Home - Course Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <h1>Welcome to the Course Management System</h1>
+    <p class="lead">Please log in or register to continue.</p>
+    <div class="mt-4">
+        <a href="{{ url_for('app_views.login') }}" class="btn btn-primary btn-lg me-2">Login</a>
+        <a href="{{ url_for('app_views.register') }}" class="btn btn-success btn-lg">Register</a>
+    </div>
+</div>
+{% endblock %}

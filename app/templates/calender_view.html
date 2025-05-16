@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Course Calendar{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container">
+  <h3 class="mb-4">Course Events</h3>
+  {% if events %}
+  <ul class="list-group">
+    {% for event in events %}
+    <li class="list-group-item">
+      <strong>{{ event.eventDate.strftime('%Y-%m-%d %H:%M') }}</strong> — {{ event.eventDescription }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No upcoming events for this course.</p>
+  {% endif %}
+</div>
+<p><a href="{{ url_for('app_views.student_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}

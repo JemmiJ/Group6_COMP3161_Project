@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}My Courses - Lecturer{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<script src="{{ url_for('static', filename='js/lecturer.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h3 class="mb-3">Courses You're Teaching</h3>
+  {% if courses %}
+  <div class="row">
+    {% for course in courses %}
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">{{ course.CName }}</h5>
+          <p class="card-text">
+            <strong>Code:</strong> {{ course.CCode }}<br>
+            <strong>Department:</strong> {{ course.CDepartment }}
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>You are not assigned to any courses.</p>
+  {% endif %}
+</div>
+{% endblock %}

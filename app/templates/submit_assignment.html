@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Submit Assignment</h2>
+
+{% include 'flash_messages.html' %}
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        {{ form.assignment.label }}<br>
+        {{ form.assignment(size=50) }}
+        <small>Example: <code>COMP3161 Database Systems</code></small>
+    </div>
+
+    <div class="mb-3">
+        {{ form.content.label }}<br>
+        {{ form.content(rows=5, cols=60) }}
+    </div>
+
+    <div style="margin-top: 1rem;">
+        {{ form.submit(class="btn btn-success") }}
+    </div>
+</form>
+
+<p><a href="{{ url_for('app_views.student_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}

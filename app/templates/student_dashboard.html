@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<script src="{{ url_for('static', filename='js/student.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+{% include 'flash_messages.html' %}
+<div class="container text-center">
+  <h2 class="mb-4">Welcome, Student!</h2>
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <a href="{{ url_for('app_views.student_courses') }}" class="btn btn-outline-primary w-100 mb-3">My Courses</a>
+      <a href="{{ url_for('app_views.submit_assignment') }}" class="btn btn-outline-success w-100 mb-3">Submit Assignment</a>
+      <a href="{{ url_for('app_views.view_grades') }}" class="btn btn-outline-info w-100">View Grades</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

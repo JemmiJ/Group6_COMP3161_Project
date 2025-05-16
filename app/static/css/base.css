@@ -1,7 +1,17 @@
 body {
-    background:linear-gradient(to right, #4facfe, #00f2fe);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.container {
+  margin-top: 40px;
+}
+.card {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 10px;
+}
+.navbar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.btn {
+  border-radius: 6px;
 }

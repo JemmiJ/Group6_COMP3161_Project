@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}My Grades{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container">
+  <h3 class="mb-4">Your Grades</h3>
+  {% if grades %}
+  <table class="table table-bordered table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>Assignment</th>
+        <th>Grade</th>
+        <th>Feedback</th>
+        <th>Date Submitted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in grades %}
+      <tr>
+        <td>{{ g.Title }}</td>
+        <td>{{ g.Grade }}</td>
+        <td>{{ g.Feedback }}</td>
+        <td>{{ g.SubmissionDATE.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No grades available.</p>
+  {% endif %}
+</div>
+<p><a href="{{ url_for('app_views.student_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}

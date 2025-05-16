@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField,DateTimeField
 from wtforms.validators import InputRequired,DataRequired
-from db import connectDB
+from app.db import connectDB
 
 
 """Helper functions"""
@@ -54,6 +54,64 @@ class RegisterForm(FlaskForm):
     password = PasswordField('Password', validators=[InputRequired()])
     role = SelectField('Role', choices=[('student', 'Student'), ('lectuter', 'Lecturer'),('admin', 'Admin')])
     submit = SubmitField('Register')
+
+class CourseForm(FlaskForm):
+    course_code = StringField('Course Code', validators=[DataRequired()])
+    course_name = StringField('Course Name', validators=[DataRequired()])
+    department = StringField('Department', validators=[DataRequired()])
+    lecturer = StringField('Lecturer Full Name', validators=[DataRequired()])
+    submit = SubmitField('Create Course')
+
+class RegisterCourse(FlaskForm):
+    course = StringField('Course Code and Name', validators=[DataRequired()])
+    submit = SubmitField('Register')
+
+class CalenderEventForm(FlaskForm):
+    event_date = DateTimeField('Event Date', validators=[DataRequired()])
+    event_description = TextAreaField('Description', validators=[DataRequired()])
+    course = StringField('Course Code and Name', validators=[DataRequired()])
+    submit = SubmitField('Add Event')
+
+class ForumForm(FlaskForm):
+    forum_name = StringField('Forum Name', validators=[DataRequired()])
+    course = StringField('Course Code and Name', validators=[DataRequired()])
+    submit = SubmitField('Create Forum')
+
+class DiscussionThreadForm(FlaskForm):
+    title = StringField('Thread Title', validators=[DataRequired()])
+    content = TextAreaField('Content', validators=[DataRequired()])
+    forum = StringField('Forum Name', validators=[DataRequired()])
+    submit = SubmitField('Post Thread')
+
+class CommentForm(FlaskForm):
+    thread = StringField('Thread Title', validators=[DataRequired()])
+    content = TextAreaField('Comment Content', validators=[DataRequired()])
+    submit = SubmitField('Post Comment')
+
+class CourseContentForm(FlaskForm):
+    course = StringField('Course Code and Name', validators=[DataRequired()])
+    section_no = StringField('Section Number', validators=[DataRequired()])
+    content = TextAreaField('Content', validators=[DataRequired()])
+    submit = SubmitField('Add Content')
+
+class AssignmentForm(FlaskForm):
+    course = StringField('Course Code and Name', validators=[DataRequired()])
+    title = StringField('Assignment Title', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[DataRequired()])
+    due_date = DateTimeField('Due Date', validators=[DataRequired()])
+    submit = SubmitField('Create Assignment')
+
+class SubmissionForm(FlaskForm):
+    assignment = StringField('Assignment Code and Name', validators=[DataRequired()])
+    content = TextAreaField('Submission Content', validators=[DataRequired()])
+    submit = SubmitField('Submit Assignment')
+
+class GradeForm(FlaskForm):
+    assignment = StringField('Assignment Code and Name', validators=[DataRequired()])
+    student_id = StringField('Student ID', validators=[DataRequired()])
+    grade = StringField('Grade', validators=[DataRequired()])
+    feedback = TextAreaField('Feedback')
+    submit = SubmitField('Submit Grade')
 
 
 

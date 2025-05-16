@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Post a Reply</h2>
+
+{% include 'flash_messages.html' %}
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div>
+        {{ form.thread.label }}<br>
+        {{ form.thread(size=60) }}
+        <small>Enter the thread title exactly</small>
+    </div>
+
+    <div>
+        {{ form.content.label }}<br>
+        {{ form.content(rows=5, cols=60) }}
+    </div>
+
+    <div style="margin-top: 1rem;">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+<p><a href="{{ url_for('forums.view_threads', forum_id=1) }}">Back to Threads</a></p>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Forums for Course {{ course_id }}</h2>
+
+{% include 'flash_messages.html' %}
+
+{% if forums %}
+<ul>
+    {% for forum in forums %}
+        <li>
+            <strong>{{ forum.ForumName }}</strong> —
+            <a href="{{ url_for('forums.view_threads', forum_id=forum.ForumID) }}">View Threads</a>
+        </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No forums available yet.</p>
+{% endif %}
+
+<p>
+    <a href="{{ url_for('forums.create_thread') }}">➕ Create New Thread</a>
+</p>
+<p><a href="{{ url_for('app_views.student_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}

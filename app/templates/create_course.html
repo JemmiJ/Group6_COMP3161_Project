@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Create Course{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container col-md-8 offset-md-2">
+  <h3 class="mb-4 text-center">Create a New Course</h3>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.course_code.label(class="form-label") }}
+      {{ form.course_code(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.course_name.label(class="form-label") }}
+      {{ form.course_name(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.department.label(class="form-label") }}
+      {{ form.department(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.lecturer.label(class="form-label") }}
+      {{ form.lecturer(class="form-control") }}
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Create Course</button>
+  </form>
+</div>
+{% endblock %}

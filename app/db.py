@@ -1,10 +1,10 @@
-
 import pymysql
-from app import app
+import os
+
 def connectDB():
     return pymysql.connect(
         user='CMS_ADMIN', 
-        password= app.config['PASSWORD'], 
+        password= os.environ.get('PASSWORD'), 
         host='localhost', 
         database='CourseManagementSystem',
         auth_plugin='mysql_native_password'

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Create Thread{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container col-md-8 offset-md-2">
+  <h3 class="text-center mb-4">Start a Discussion</h3>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.forum.label(class="form-label") }}
+      {{ form.forum(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.title.label(class="form-label") }}
+      {{ form.title(class="form-control") }}
+    </div>
+    <div class="mb-3">
+      {{ form.content.label(class="form-label") }}
+      {{ form.content(class="form-control", rows="5") }}
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Create Thread</button>
+  </form>
+</div>
+{% endblock %}

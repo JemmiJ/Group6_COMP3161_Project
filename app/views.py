@@ -1,681 +1,680 @@
-import os
-from app import app, login_manager
-from flask import Blueprint, render_template, request, redirect, jsonify,url_for,flash
-from flask_login import login_user, login_required, logout_user
-from werkzeug.security import check_password_hash
-from werkzeug.security import generate_password_hash
-from flask_bcrypt import Bcrypt 
-from app.forms import * 
-import jwt, datetime,json
-from app.utils import token_required
+# Refactored views.py for COMP3161 Course Management System
 
-
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask_login import UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from app.forms import LoginForm, RegisterForm, CourseForm, RegisterCourse, CalenderEventForm, ForumForm, DiscussionThreadForm, CommentForm, CourseContentForm, AssignmentForm, SubmissionForm, GradeForm
+from app.utils import token_required, role_required
+from app.db import connectDB
+import json
 
 app_views = Blueprint('app_views', __name__)
-bcrypt = Bcrypt(app) 
 
+@app_views.route('/')
+def home():
+    """Render website's home page."""
+    return render_template('home.html')
 
-@app.route('/login', methods=['POST'])
-def user_login():
+# --- Auth Routes ---
+@app_views.route('/login', methods=['GET', 'POST'])
+def login():
     form = LoginForm()
-    db_conn = connectDB()
-    cursor = db_conn.cursor()
-    if form.validate_on_submit():
+    if request.method == 'POST' and form.validate_on_submit():
+        db = connectDB()
+        cursor = db.cursor(dictionary=True)
         user_id = form.user_id.data
-        user_password = form.password.data
-        query = "SELECT * FROM CMS_Account WHERE AccName = %s"
-        cursor.execute(query, (user_id))
+        password = form.password.data
+        
+        cursor.execute("SELECT * FROM CMS_Account WHERE AccID = %s", (user_id,))
         account = cursor.fetchone()
-        if account:
-            if bcrypt.check_password_hash(user_password, account.password):
-                login_user(account)
-                flash('Logged in successfully!', 'success')
-                return redirect(url_for('index'))
-            else:
-                flash('Invalid username or password', 'fail')
+
+        if account and check_password_hash(account['AccPassword'], password):
+            session['user_id'] = account['AccID']
+            # Determine user role
+            cursor.execute("SELECT * FROM CMS_Students WHERE StudID = %s", (user_id,))
+            if cursor.fetchone():
+                session['role'] = 'student'
+                return redirect(url_for('app_views.student_dashboard'))
+
+            cursor.execute("SELECT * FROM CMS_Lecturers WHERE LecID = %s", (user_id,))
+            if cursor.fetchone():
+                session['role'] = 'lecturer'
+                return redirect(url_for('app_views.lec_dashboard'))
+
+            cursor.execute("SELECT * FROM CMS_Admin WHERE AdminID = %s", (user_id,))
+            if cursor.fetchone():
+                session['role'] = 'admin'
+                return redirect(url_for('app_views.admin_dashboard'))
+
+            flash("User role not found.", "danger")
         else:
-            flash('User not found', 'fail')
-    return render_template('login/login.html', form=form)
+            flash("Invalid login credentials.", "danger")
+
+    return render_template('login.html', form=form)
 
 
 
+@app_views.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegisterForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        db = connectDB()
+        cursor = db.cursor()
 
-@app.route('/register', methods=['POST'])
-def user_register():
-    try:
-        form = RegisterForm()
-        db_conn= connectDB()
-        cursor = db_conn.cursor()
-        if form.validate_on_submit():
-            user_id = form.user_id.data
-            password = form.password.data
-            first_name = form.first_name.data
-            last_name = form.last_name.data
+        user_id = form.user_id.data
+        password = generate_password_hash(form.password.data)
+        first_name = form.first_name.data
+        last_name = form.last_name.data
+        role = request.form.get('role')
 
-            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8') 
+        # Insert into CMS_Account
+        cursor.execute("INSERT INTO CMS_Account (AccID, AccPassword) VALUES (%s, %s)", (user_id, password))
 
-            acc_insert = "INSERT INTO CMS_Account (AccID, AccPassword) VALUES (%s, %s)"
-            cursor.execute(acc_insert, (user_id, hashed_password ))
+        if role == 'student':
+            cursor.execute("INSERT INTO CMS_Students (StudID, FirstName, LastName) VALUES (%s, %s, %s)",
+                           (user_id, first_name, last_name))
+        elif role == 'lecturer':
+            department = request.form.get('department')
+            cursor.execute("INSERT INTO CMS_Lecturers (LecID, LFirstName, LLastname, Department) VALUES (%s, %s, %s, %s)",
+                           (user_id, first_name, last_name, department))
+        elif role == 'admin':
+            cursor.execute("INSERT INTO CMS_Admin (AdminID, AdminName, AdminPassword) VALUES (%s, %s, %s)",
+                           (user_id, first_name + ' ' + last_name, password))
 
-            if request.form['role'] == 'Student':
-                student_insert= "INSERT INTO CMS_Students(StudID, FirstName, LastName) VALUES (%s, %s, %s)"
-                cursor.execute = (student_insert, (user_id, first_name, last_name))
-            
-            elif request.form['role']== 'Lecturer':
-                lecturer_insert = "INSERT INTO CMS_Lecturers(LecID,LFirstName,LLastname ,Department) VALUES (%s,%s,%s,%s)"
-                cursor.execute = (lecturer_insert, (user_id, first_name, last_name, request.form['Department']))
+        db.commit()
+        flash("Account created successfully. Please log in.", "success")
+        return redirect(url_for('app_views.login'))
 
-            db_conn.commit()
-            return redirect(url_for('user_login'))
-        return render_template('signup/signup.html', form=form)
-    except Exception as err:
-        print({"Error": err})
+    return render_template('signup.html', form=form)
 
-#how to get the id for the account
+
+@app_views.route('/logout')
 @login_required
-@app_views.route('/create/course', methods=['POST'])
-def create_course():
-    if request.form['role'] == 'Admin':
-        try:
-            form = CourseForm()
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-
-            if form.validate_on_submit():
-                course_code = form.course_code.data
-                course_name = form.course_name.data
-                department = form.department.data
-                lecturer_name = form.lecturer.data
-                def get_lecturer_id(name):
-                    db_conn = connectDB()
-                    cursor = db_conn.cursor()
-                    lec_query = "SELECT LecID FROM CMS_Lecturers WHERE LFirstName= AND    LLastname= "
-                    return id
-                
-                lecturer_id = get_lecturer_id(lecturer_name)
-
-                course_insert = "INSERT INTO CMS_Courses(CName,CCode,CDepartment, LecID) VALUES (%s, %s, %s, %s)"
-                cursor.execute(course_insert, (course_name, course_code, department, lecturer_id))
-
-                db_conn.commit()
-                return redirect(url_for('create_course'))
-
-                pass
-        except:
-            pass
-
-
-
-@login_required
-@app_views.route('/logout', methods=['POST'])
 def logout():
     logout_user()
-    return redirect(url_for("user_login"))
-    
-
-#Retrieve Courses
-@app_views.route("/api/courses", methods=["GET"])
-def get_courses():
-    if request.method== 'GET':
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-
-            courses_query = "SELECT * FROM CMS_Courses"
-            cursor.execute(courses_query)
-
-            course_lst = []
-
-            for course_id, course_name, course_code, course_department,lec_id in cursor:
-                course = {}
-                course['CID'] = course_id
-                course[' CName '] = course_name
-                course['CCode'] = course_code
-                course['CDepartment'] = course_department
-                course['LecID'] = lec_id
-
-                course_lst.append(course)
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_lst, sort_keys=False)
-        except Exception as err:
-            print({"Error": err})
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for('app_views.login'))
 
 
-@app_views.route("/api/courses/<student_id>", methods=['POST'])
-def get_student_courses(student_id):
-    if request.method =='POST':
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-
-            student_courses = "SELECT CID,CName,CCode,CDepartment,LecID  FROM CMS_Courses INNER JOIN CMS_Enrolment on  CMS_Courses.CID=CMS_Enrolment.CID WHERE CMS_Enrolment.StudID={0}".format(student_id)
-            cursor.execute(student_courses)
-
-            course_lst = []
-
-            for course_id, course_name, course_code, course_department,lec_id in cursor:
-                course = {}
-                course['CID'] = course_id
-                course[' CName '] = course_name
-                course['CCode'] = course_code
-                course['CDepartment'] = course_department
-                course['LecID'] = lec_id
-
-                course_lst.append(course)
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_lst, sort_keys=False)
-        except Exception as err:
-            print({"Error": err})        
-
-@app_views.route("/api/courses/<lecturer_id>", methods=['POST'])
-def get_lecturer_courses(lecturer_id):
-    """Retrieves a list of courses taught by a lecturer."""
-    if request.method =='POST':
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-
-            courses_taught = "SELECT CID,CName,CCode,CDepartment,LecID FROM CMS_Courses WHERE LecID={0}".format(lecturer_id)
-            cursor.execute(courses_taught)
-
-            course_lst = []
-
-            for course_id, course_name, course_code, course_department,lec_id in cursor:
-                course = {}
-                course['CID'] = course_id
-                course['CName'] = course_name
-                course['CCode'] = course_code
-                course['CDepartment'] = course_department
-                course['LecID'] = lec_id
-
-                course_lst.append(course)
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_lst, sort_keys=False)
-        except Exception as err:
-            print({"Error": err})  
-
-
-@app_views.route("/api/course/<course_id>", methods=["POST"])
-def get_course_members(course_id):
-    """This function retrieves a list of students and lecturers enrolled in a course.
-"""
-    if request.method=="POST":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            members_query = "SELECT FirstName ,LastName FROM CMS_Students  \
-            INNER JOIN CMS_Enrolment on CMS_Students.StudID=CMS_Enrolment.StudID\
-            INNER JOIN CMS_Courses on CMS_Enrolment.CID=CMS_Courses.CID \
-            WHERE CMS_Courses.CID=%s\
-            UNION SELECT LFirstName ,LLastname FROM CMS_Lecturers\
-            INNER JOIN CMS_Teaches on CMS_Lecturers.LecID=CMS_Teaches.LecID \
-            INNER JOIN CMS_Courses on CMS_Teaches.CID= CMS_Courses.CID \
-            WHERE CMS_Courses.CID=%s"
-            cursor.execute(members_query, (course_id, course_id))
-
-            names_lst = []
-            for first_name, last_name in cursor:
-                name = {}
-                name['Full_name'] = (first_name, last_name)
-                names_lst.append(name)
-            cursor.close()
-            db_conn.close()
-            return json.dumps(names_lst, sort_keys=False)
-            
-        except Exception as err:
-            print({"Error": err})
-
-@app_views.route("/api/register/course/<student_id>", methods=["POST"])
-def register_course(student_id):
-    """
-    Registers a student for a course.
-    """
-    if request.method == "POST":
-        form = RegisterCourse()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                course = form.course.data
-                course_code, course_name = course.split()
-                select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                cursor.execute(select_query, (course_code, course_name))
-                course_id = cursor.fetchone()
-                insert_course = "INSERT INTO CMS_Enrolment(StudID, CID) VALUES(%s, %s)"
-                cursor.execute(insert_course,(student_id, course_id) )
-                cursor.close()
-                db_conn.close()
-            except Exception as err:
-                  print({"Error": err})
-    pass
-
-
-@app_views.route("/calender_event/<course_id>", methods="POST")
-def get_calender_events(course_id):
-    if request.method =="POST":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-
-            calender_query = "SELECT * FROM CMS_Events WHERE CourseID =%s"
-            cursor.execute(calender_query, (course_id))
-            event_lst= []
-            for event_ID, course_ID, event_Date, event_Description in cursor:
-                event = {}
-                event["eventID"] = event_ID
-                event["CourseID"] = course_ID
-                event["eventDate"] = event_Date
-                event['eventDescription'] = event_Description
-                event_lst.append(event)
-            cursor.close()
-            db_conn.close()
-            return json.dumps(event_lst, sort_keys=False)
-        except Exception as err:
-            print({"Error":err})
-
-@app_views.route("/calender_event/<calender_date>/<student_id>", methods="GET")
-def get_student_events(calender_date,student_id):
-    if request.method =="GET":
-        try:
-            db_conn = connectDB()
-            students_events = "SELECT * from CMS_Events INNER JOIN CMS_Enrolment CMS_Events.CourseID=CMS_Enrolment.CID \
-                WHERE CMS_Enrolment.StudID = %s AND CMS_Events.eventDate = %s"
-            cursor = db_conn.cursor()
-            cursor.execute(students_events, (student_id, calender_date))
-            events = cursor.fetchall()
-            return jsonify(events)
-        
-        except Exception as err:
-            return jsonify({"Error":str(err)})
-        
-@app_views.route("/create/calender_event", methods=["POST"])
-def create_calender_event():
-    if request.method == "POST":
-        form = CalenderEventForm()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                event_date = form.event_date.data
-                description = form.event_description.data
-                course = form.course.data
-                course_code, course_name = course.split()
-                select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                cursor.execute(select_query, (course_code, course_name))
-                course_id = cursor.fetchone()
-                calender_event_insert = "INSERT INTO CMS_Events(CourseID,eventDate,eventDescription) VALUES(%s, %s, %s)"
-                cursor.execute(calender_event_insert, (course_id, event_date, description))
-                cursor.close()
-                db_conn.close()
-                return ({"Success: Calender event has been successfully added"})
-            except Exception as err:
-                return jsonify({"Error": err})
-            
-@app_views("/forums/<course_id>", methods=["GET"])
-def get_forums(course_id):
-    if request.method== "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            forum_query = "SELECT * FROM CMS_Forums WHERE ForumCourseID=%s"
-            cursor.execute(forum_query, course_id)
-            forum_lst = []
-            for forum_id, course_id, forum_name in cursor:
-                forum = {}
-                forum["ForumID"] = forum_id
-                forum["ForumCourseID"] = course_id
-                forum["ForumName"] = forum_name
-
-                forum_lst.append(forum)
-            cursor.close()
-            db_conn.close()
-            return json.dumps(forum_lst, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
-
-@app_views("/api/create/forum", methods=["POST"])
-def create_course_forum():
-   if request.method == "POST":
-       form = ForumForm()
-       if form.validate_on_submit():
-           try:
-               db_conn = connectDB()
-               cursor = db_conn.cursor()
-               forum_name = form.forum_name.data
-               course  = form.course.data
-               course_code, course_name = course.split()
-               select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-               cursor.execute(select_query, (course_code, course_name))
-               course_id = cursor.fetchone()
-
-               forum_insert = "INSERT INTO CMS_Forums(ForumCourseID, ForumName) VALUES (%s, %s)"
-               cursor.execute(forum_insert, (course_id, forum_name))
-
-               return ({
-                   "Statuscode":201,
-                   "Success": "Forum created successfully"
-               })
-           except Exception as err:
-               return({"Error": err})
-    
-
-@app_views("/api/discussion_threads/<forum_id>", methods=["GET"])
-def get_forum_threads(forum_id):
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-
-            thread_query= "SELECT * FROM CMS_Threads WHERE ForumID=%s"
-            cursor.execute(thread_query, (forum_id))
-
-            threads = cursor.fetchall()
-            thread_lst = []
-
-            for thread_id, forum_id, creater_id, thread_title, thread_content, created_at in cursor:
-                thread = {}
-                thread["TID"] = thread_id
-                thread["ForumID"] = forum_id
-                thread["CreatorID"] = creater_id
-                thread["Title"] = thread_title
-                thread["Content"] = thread_content
-                thread["CreatedAt"] = created_at
-                thread_lst.append(thread)
-            return json.dumps(thread_lst, sort_keys=False)
-        
-        except Exception as err:
-            return ({"Error": err})
-
-
-    
-
-@app_views("/api/create/discussion_thread/forum", methods=["POST"])
+# --- Dashboard routes ---
+@app_views.route('/student/dashboard')
 @login_required
-def create_forum_thread():
-    if request.method == "POST":
-        form  = DiscussionThreadForm()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                title = form.title.data
-                content = form.content.data 
-                forum_name = form.forum.data
+@role_required('student')
+def student_dashboard():
+    return render_template('student_dashboard.html')
 
-                forum_query= "SELECT ForumID FROM CMS_Forums WHERE ForumName=%s"
-                cursor.execute(forum_query, (forum_name))
-                forum_id = cursor.fetchone()
-                creater_id = current_user.id
 
-                insert_sql = "INSERT INTO CMS_Threads (ForumID, CreatorID, Title, Content)\
-                VALUES(%s, %s, %s, %s)"
-
-                cursor.execute(insert_sql, (forum_id, creater_id, title, content))
-                return jsonify(
-            message="Discussion thread created successfully."
-            )
-            except Exception as err:
-                return ({"Error": err})
-
-@app_views("/api/discussion_thread/forum/reply", methods=["POST"])
+@app_views.route('/lecturer/dashboard')
 @login_required
-def create_reply_thread():
-    if request.method=="POST":
-        form  = CommentForm()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                thread = form.thread.data
-                query_thread = "SELECT TID FROM CMS_Threads WHERE Title=%s"
-                cursor.execute(query_thread, (thread))
-                thread_id = cursor.fetchone()
-                user_id = current_user.id
-                content = form.content.data
-
-                comment_insert  = "INSERT INTO CMS_Comments(ThreadID, AuthorID,  Content) VALUES(%s,%s,%s)"
-                cursor.execute(comment_insert, (thread_id, user_id, content))
-
-                db_conn.commit()
-                return ({"Status" : 201,
-                         "message": "Reply created successfully"})
-    
-            except Exception as err:
-                return ({"Error": err})
+@role_required('lecturer')
+def lecturer_dashboard():
+    return render_template('lec_dashboard.html')
 
 
-@app_views("/api/create/course_content", methods=["POST"])
-def create_course_content():
-    if request.method == "POST":
-        form = CourseContentForm()
-        if form.validate_on_submit():
-            if request.form["contentType"]=="link":
-                try:
-                    db_conn = connectDB()
-                    cursor = db_conn.cursor()
-                    course = form.course.data
-                    section_no = form.section_no.data
-                    content = form.content.data
-                    content_type = request.form["contentType"]
-                    course_code, course_name = course.split()
-                    select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                    cursor.execute(select_query, (course_code, course_name))
-                    course_id = cursor.fetchone()
-                    course_content_insert = "INSERT INTO CMS_CourseContent(CourseID, SectionNo, Content, ContentType) VALUES(%s, %s, %s, %s)"
-                except Exception as err:
-                    return ({"Error": err})
-            elif request.form["contentType"]=="file":
-                try:
-                    db_conn = connectDB()
-                    cursor = db_conn.cursor()
-                    course = form.course.data
-                    section_no = form.section_no.data
-                    content = form.content.data
-                    content_type = request.form["contentType"]
-                    course_code, course_name = course.split()
-                    select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                    cursor.execute(select_query, (course_code, course_name))
-                    course_id = cursor.fetchone()
-                    course_content_insert = "INSERT INTO CMS_CourseContent(CourseID, SectionNo, Content, ContentType) VALUES(%s, %s, %s, %s)"
-                except Exception as err:
-                    return ({"Error": err})
-            elif request.form["contentType"]=="slide":
-                try:
-                    db_conn = connectDB()
-                    cursor = db_conn.cursor()
-                    course = form.course.data
-                    section_no = form.section_no.data
-                    content = form.content.data
-                    content_type = request.form["contentType"]
-                    course_code, course_name = course.split()
-                    select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                    cursor.execute(select_query, (course_code, course_name))
-                    course_id = cursor.fetchone()
-                    course_content_insert = "INSERT INTO CMS_CourseContent(CourseID, SectionNo, Content, ContentType) VALUES(%s, %s, %s, %s)"
-                except Exception as err:
-                    return ({"Error": err})
+@app_views.route('/admin/dashboard')
+@login_required
+@role_required('admin')
+def admin_dashboard():
+    return render_template('admin_dashboard.html')
 
-            cursor.execute(course_content_insert, (course_id, section_no, content, content_type))
-            db_conn.commit()
-            return ({"Status" : 201,
-                     "message": "Course content created successfully"})
-        
-@app_views("/api/get/course_content/<course_id>", methods=["GET"])
-def get_course_content(course_id):
-    if request.method == "GET":
+@app_views.route('/courses/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def create_course():
+    form = CourseForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        course_code = form.course_code.data
+        course_name = form.course_name.data
+        department = form.department.data
+        lecturer_name = form.lecturer.data
+
         try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_CourseContent WHERE CourseID=%s"
-            cursor.execute(course_content_query, (course_id))
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
-        
+            first, last = lecturer_name.strip().split(" ", 1)
+            db = connectDB()
+            cursor = db.cursor()
+            cursor.execute("SELECT LecID FROM CMS_Lecturers WHERE LFirstName = %s AND LLastname = %s", (first, last))
+            lec = cursor.fetchone()
+
+            if not lec:
+                flash("Lecturer not found", "danger")
+                return redirect(url_for('app_views.create_course'))
+
+            lec_id = lec[0]
+            cursor.execute("""
+                INSERT INTO CMS_Courses (CName, CCode, CDepartment, LecID)
+                VALUES (%s, %s, %s, %s)
+            """, (course_name, course_code, department, lec_id))
+            db.commit()
+            flash("Course created successfully.", "success")
+            return redirect(url_for('app_views.create_course'))
+
+        except Exception as e:
+            flash(f"Error: {e}", "danger")
+
+    return render_template('create_course.html', form=form)
 
 
-@app_views("/api/create_assignment", methods=["POST"])
+@app_views.route('/courses')
+@login_required
+def view_all_courses():
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM CMS_Courses")
+    courses = cursor.fetchall()
+    return render_template('course_list.html', courses=courses)
+
+
+@app_views.route('/student/courses')
+@login_required
+@role_required('student')
+def student_courses():
+    student_id = session['user_id']
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT * FROM CMS_Courses
+        INNER JOIN CMS_Enrolment ON CMS_Courses.CID = CMS_Enrolment.CID
+        WHERE CMS_Enrolment.StudID = %s
+    """, (student_id,))
+    courses = cursor.fetchall()
+    return render_template('student_courses.html', courses=courses)
+
+
+@app_views.route('/lecturer/courses')
+@login_required
+@role_required('lecturer')
+def lecturer_courses():
+    lecturer_id = session['user_id']
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM CMS_Courses WHERE LecID = %s", (lecturer_id,))
+    courses = cursor.fetchall()
+    return render_template('lecturer_courses.html', courses=courses)
+
+
+@app_views.route('/courses/register', methods=['GET', 'POST'])
+@login_required
+@role_required('student')
+def register_course():
+    form = RegisterCourse()
+    student_id = session['user_id']
+    if request.method == 'POST' and form.validate_on_submit():
+        course = form.course.data
+        try:
+            course_code, course_name = course.strip().split(" ", 1)
+            db = connectDB()
+            cursor = db.cursor()
+            cursor.execute("SELECT CID FROM CMS_Courses WHERE CCode = %s AND CName = %s", (course_code, course_name))
+            result = cursor.fetchone()
+            if not result:
+                flash("Course not found.", "danger")
+                return redirect(url_for('app_views.register_course'))
+            course_id = result[0]
+            cursor.execute("INSERT INTO CMS_Enrolment (StudID, CID) VALUES (%s, %s)", (student_id, course_id))
+            db.commit()
+            flash("Registered for course successfully.", "success")
+        except Exception as e:
+            flash(f"Error: {e}", "danger")
+    return render_template('register_course.html', form=form)
+
+@app_views.route('/calendar/<int:course_id>')
+@login_required
+def view_calendar(course_id):
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM CMS_Events WHERE CourseID = %s", (course_id,))
+    events = cursor.fetchall()
+    return render_template('calendar_view.html', events=events, course_id=course_id)
+
+
+@app_views.route('/calendar/create', methods=['GET', 'POST'])
+@login_required
+@role_required('lecturer')
+def create_event():
+    form = CalenderEventForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        try:
+            event_date = form.event_date.data
+            description = form.event_description.data
+            course = form.course.data.strip()
+            course_code, course_name = course.split(" ", 1)
+
+            db = connectDB()
+            cursor = db.cursor()
+            cursor.execute("SELECT CID FROM CMS_Courses WHERE CCode = %s AND CName = %s", (course_code, course_name))
+            cid_row = cursor.fetchone()
+            if not cid_row:
+                flash("Course not found.", "danger")
+                return redirect(url_for('app_views.create_event'))
+
+            course_id = cid_row[0]
+            cursor.execute("""
+                INSERT INTO CMS_Events (CourseID, eventDate, eventDescription)
+                VALUES (%s, %s, %s)
+            """, (course_id, event_date, description))
+            db.commit()
+            flash("Event created successfully.", "success")
+            return redirect(url_for('app_views.view_calendar', course_id=course_id))
+        except Exception as e:
+            flash(f"Error: {e}", "danger")
+    return render_template('create_event.html', form=form)
+
+
+@app_views.route('/calendar/date/<string:date>/student')
+@login_required
+@role_required('student')
+def student_events_by_date(date):
+    student_id = session['user_id']
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT e.* FROM CMS_Events e
+        JOIN CMS_Enrolment en ON e.CourseID = en.CID
+        WHERE en.StudID = %s AND DATE(e.eventDate) = %s
+    """, (student_id, date))
+    events = cursor.fetchall()
+    return render_template('student_events.html', events=events, date=date)
+
+@app_views.route('/forums/<int:course_id>')
+@login_required
+def view_forums(course_id):
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM CMS_Forums WHERE ForumCourseID = %s", (course_id,))
+    forums = cursor.fetchall()
+    return render_template('forums_list.html', forums=forums, course_id=course_id)
+
+
+@app_views.route('/forums/create', methods=['GET', 'POST'])
+@login_required
+@role_required('lecturer')
+def create_forum():
+    form = ForumForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        forum_name = form.forum_name.data
+        course_code, course_name = form.course.data.strip().split(" ", 1)
+        db = connectDB()
+        cursor = db.cursor()
+        cursor.execute("SELECT CID FROM CMS_Courses WHERE CCode = %s AND CName = %s", (course_code, course_name))
+        course_id = cursor.fetchone()
+
+        if not course_id:
+            flash("Course not found.", "danger")
+            return redirect(url_for('app_views.create_forum'))
+
+        cursor.execute("INSERT INTO CMS_Forums (ForumCourseID, ForumName) VALUES (%s, %s)", (course_id[0], forum_name))
+        db.commit()
+        flash("Forum created successfully.", "success")
+        return redirect(url_for('app_views.view_forums', course_id=course_id[0]))
+
+    return render_template('create_forum.html', form=form)
+
+
+@app_views.route('/threads/<int:forum_id>')
+@login_required
+def view_threads(forum_id):
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM CMS_Threads WHERE ForumID = %s", (forum_id,))
+    threads = cursor.fetchall()
+    return render_template('thread_list.html', threads=threads, forum_id=forum_id)
+
+
+@app_views.route('/threads/create', methods=['GET', 'POST'])
+@login_required
+def create_thread():
+    form = DiscussionThreadForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        title = form.title.data
+        content = form.content.data
+        forum_name = form.forum.data
+        user_id = session['user_id']
+
+        db = connectDB()
+        cursor = db.cursor()
+        cursor.execute("SELECT ForumID FROM CMS_Forums WHERE ForumName = %s", (forum_name,))
+        forum_id = cursor.fetchone()
+
+        if not forum_id:
+            flash("Forum not found.", "danger")
+            return redirect(url_for('app_views.create_thread'))
+
+        cursor.execute("""
+            INSERT INTO CMS_Threads (ForumID, CreatorID, Title, Content)
+            VALUES (%s, %s, %s, %s)
+        """, (forum_id[0], user_id, title, content))
+        db.commit()
+        flash("Thread created successfully.", "success")
+        return redirect(url_for('app_views.view_threads', forum_id=forum_id[0]))
+
+    return render_template('create_thread.html', form=form)
+
+
+@app_views.route('/replies/create', methods=['GET', 'POST'])
+@login_required
+def create_reply():
+    form = CommentForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        thread_title = form.thread.data
+        content = form.content.data
+        user_id = session['user_id']
+
+        db = connectDB()
+        cursor = db.cursor()
+        cursor.execute("SELECT TID FROM CMS_Threads WHERE Title = %s", (thread_title,))
+        thread = cursor.fetchone()
+
+        if not thread:
+            flash("Thread not found.", "danger")
+            return redirect(url_for('app_views.create_reply'))
+
+        cursor.execute("INSERT INTO CMS_Comments (ThreadID, AuthorID, Content) VALUES (%s, %s, %s)",
+                       (thread[0], user_id, content))
+        db.commit()
+        flash("Reply posted successfully.", "success")
+        return redirect(url_for('app_views.view_threads', forum_id=thread[0]))
+
+    return render_template('create_reply.html', form=form)
+
+@app_views.route('/assignments/create', methods=['GET', 'POST'])
+@login_required
+@role_required('lecturer')
 def create_assignment():
-    if request.method == "POST":
-        form = AssignmentForm()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                course = form.course.data
-                course_code, course_name = course.split()
-                select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                cursor.execute(select_query, (course_code, course_name))
-                course_id = cursor.fetchone()
-                assignment_insert = "INSERT INTO CMS_Assignments(CourseID, Title, Description, DueDate) VALUES(%s, %s, %s, %s)"
-                cursor.execute(assignment_insert, (course_id, form.title.data, form.description.data, form.due_date.data))
-                db_conn.commit()
-                return ({"Status" : 201,
-                         "message": "Assignment created successfully"})
-            except Exception as err:
-                return ({"Error": err})
-#Student can submit assignment to a course
-app_views("/api/submit_assignment", methods=["POST"])
+    form = AssignmentForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        course = form.course.data.strip()
+        course_code, course_name = course.split(" ", 1)
+
+        db = connectDB()
+        cursor = db.cursor()
+        cursor.execute("SELECT CID FROM CMS_Courses WHERE CCode = %s AND CName = %s", (course_code, course_name))
+        course_id = cursor.fetchone()
+
+        if not course_id:
+            flash("Course not found.", "danger")
+            return redirect(url_for('app_views.create_assignment'))
+
+        cursor.execute("""
+            INSERT INTO CMS_Assignments (CourseID, Title, Description, DueDate)
+            VALUES (%s, %s, %s, %s)
+        """, (course_id[0], form.title.data, form.description.data, form.due_date.data))
+        db.commit()
+        flash("Assignment created successfully.", "success")
+        return redirect(url_for('app_views.create_assignment'))
+
+    return render_template('create_assignment.html', form=form)
+
+
+@app_views.route('/assignments/submit', methods=['GET', 'POST'])
+@login_required
+@role_required('student')
 def submit_assignment():
-    if request.method == "POST":
-        form = SubmissionForm()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                course = form.assignment.data
-                course_code, course_name = course.split()
-                select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                cursor.execute(select_query, (course_code, course_name))
-                course_id = cursor.fetchone()
-                assignment_insert = "INSERT INTO CMS_Submissions(CourseID, AssignmentID, Content) VALUES(%s, %s, %s)"
-                cursor.execute(assignment_insert, (course_id, form.assignment.data, form.content.data))
-                db_conn.commit()
-                return ({"Status" : 201,
-                         "message": "Assignment submitted successfully"})
-            except Exception as err:
-                return ({"Error": err})
+    form = SubmissionForm()
+    student_id = session['user_id']
+    if request.method == 'POST' and form.validate_on_submit():
+        course = form.assignment.data.strip()
+        course_code, course_name = course.split(" ", 1)
 
-#A lecturer can submit a grade for a particular student for that assignment.
-app_views("/api/grade_assignment", methods=["POST"])
+        db = connectDB()
+        cursor = db.cursor()
+        cursor.execute("SELECT CID FROM CMS_Courses WHERE CCode = %s AND CName = %s", (course_code, course_name))
+        course_id = cursor.fetchone()
+
+        if not course_id:
+            flash("Course not found.", "danger")
+            return redirect(url_for('app_views.submit_assignment'))
+
+        # Get assignment ID (assuming latest for course)
+        cursor.execute("SELECT AssignId FROM CMS_Assignments WHERE CourseID = %s ORDER BY DueDate DESC LIMIT 1", (course_id[0],))
+        assignment_id = cursor.fetchone()
+
+        if not assignment_id:
+            flash("Assignment not found for this course.", "danger")
+            return redirect(url_for('app_views.submit_assignment'))
+
+        cursor.execute("""
+            INSERT INTO CMS_Submissions (AID, SID, Content)
+            VALUES (%s, %s, %s)
+        """, (assignment_id[0], student_id, form.content.data))
+        db.commit()
+        flash("Assignment submitted successfully.", "success")
+        return redirect(url_for('app_views.submit_assignment'))
+
+    return render_template('submit_assignment.html', form=form)
+
+
+@app_views.route('/assignments/grade', methods=['GET', 'POST'])
+@login_required
+@role_required('lecturer')
 def grade_assignment():
-    if request.method == "POST":
-        form = GradeForm()
-        if form.validate_on_submit():
-            try:
-                db_conn = connectDB()
-                cursor = db_conn.cursor()
-                course = form.assignment.data
-                course_code, course_name = course.split()
-                select_query= "SELECT CID FROM CMS_Courses WHERE CCode =%s AND CName=%s"
-                cursor.execute(select_query, (course_code, course_name))
-                course_id = cursor.fetchone()
-                assignment_insert = "INSERT INTO CMS_Submissions(CourseID, AssignmentID, Content) VALUES(%s, %s, %s)"
-                cursor.execute(assignment_insert, (course_id, form.assignment.data, form.content.data))
-                db_conn.commit()
-                return ({"Status" : 201,
-                         "message": "Assignment submitted successfully"})
-            except Exception as err:
-                return ({"Error": err})
+    form = GradeForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        student_id = form.student_id.data
+        grade = form.grade.data
+        feedback = form.feedback.data
+        course = form.assignment.data.strip()
+        course_code, course_name = course.split(" ", 1)
 
-#Each grade a student gets goes to their final average.
-app_views("/api/get_grades", methods=["GET"])
-def get_grades():
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_Submissions"
-            cursor.execute(course_content_query)
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
+        db = connectDB()
+        cursor = db.cursor()
+        cursor.execute("SELECT CID FROM CMS_Courses WHERE CCode = %s AND CName = %s", (course_code, course_name))
+        course_id = cursor.fetchone()
 
-#Report section
-app_views("/api/courses/students/<count>", methods=["GET"])
-def get_courses_students(count):
-    #All courses that have 50 or more students
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_Enrolment"
-            cursor.execute(course_content_query)
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
-        
-#All students that do 5 or more courses
-app_views("/api/courses/students/<int:count>", methods=["GET"])
-def get_courses_students(count):
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_Enrolment"
-            cursor.execute(course_content_query)
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
+        cursor.execute("SELECT AssignId FROM CMS_Assignments WHERE CourseID = %s ORDER BY DueDate DESC LIMIT 1", (course_id[0],))
+        assignment_id = cursor.fetchone()
 
-#All lecturers that teach 3 or more courses.
-app_views("/api/courses/lecturers/<int:count>", methods=["GET"])
-def get_courses_lecturers(count):
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_Enrolment"
-            cursor.execute(course_content_query)
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
+        if assignment_id:
+            cursor.execute("""
+                UPDATE CMS_Submissions
+                SET Grade = %s, Feedback = %s
+                WHERE AID = %s AND SID = %s
+            """, (grade, feedback, assignment_id[0], student_id))
+            db.commit()
+            flash("Grade submitted successfully.", "success")
+        else:
+            flash("Assignment not found.", "danger")
 
-#The 10 most enrolled courses
-app_views("/api/courses/most_enrolled", methods=["GET"])
-def get_courses_enrolled():
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_Enrolment"
-            cursor.execute(course_content_query)
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
-        
-@app_views("/api/students_highest_average", methods=["GET"])
-def get_students_highest_average():
-    if request.method == "GET":
-        try:
-            db_conn = connectDB()
-            cursor = db_conn.cursor()
-            course_content_query = "SELECT * FROM CMS_Enrolment"
-            cursor.execute(course_content_query)
-            course_content = cursor.fetchall()
-            cursor.close()
-            db_conn.close()
-            return json.dumps(course_content, sort_keys=False)
-        except Exception as err:
-            return ({"Error": err})
+    return render_template('grade_assignment.html', form=form)
+
+
+@app_views.route('/grades')
+@login_required
+@role_required('student')
+def view_grades():
+    student_id = session['user_id']
+    db = connectDB()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT a.Title, s.Grade, s.Feedback, s.SubmissionDATE
+        FROM CMS_Submissions s
+        JOIN CMS_Assignments a ON s.AID = a.AssignId
+        WHERE s.SID = %s
+        ORDER BY s.SubmissionDATE DESC
+    """, (student_id,))
+    grades = cursor.fetchall()
+    return render_template('view_grades.html', grades=grades)
+
+@app_views.route('/api/reports/courses/min_students/<int:min_students>', methods=['GET'])
+@login_required
+@role_required('admin')
+def courses_with_min_students(min_students):
+    """Return courses with at least min_students enrolled."""
+    try:
+        db_conn = connectDB()
+        cursor = db_conn.cursor()
+
+        query = """
+        SELECT c.CID, c.CName, COUNT(e.StudID) AS student_count
+        FROM CMS_Courses c
+        JOIN CMS_Enrolment e ON c.CID = e.CID
+        GROUP BY c.CID, c.CName
+        HAVING student_count >= %s
+        ORDER BY student_count DESC
+        """
+        cursor.execute(query, (min_students,))
+        results = cursor.fetchall()
+
+        courses = []
+        for cid, cname, count in results:
+            courses.append({
+                "CourseID": cid,
+                "CourseName": cname,
+                "StudentCount": count
+            })
+
+        cursor.close()
+        db_conn.close()
+        return jsonify(courses)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app_views.route('/api/reports/students/min_courses/<int:min_courses>', methods=['GET'])
+@login_required
+@role_required('admin')
+def students_with_min_courses(min_courses):
+    """Return students enrolled in at least min_courses."""
+    try:
+        db_conn = connectDB()
+        cursor = db_conn.cursor()
+
+        query = """
+        SELECT s.StudID, s.FirstName, s.LastName, COUNT(e.CID) AS course_count
+        FROM CMS_Students s
+        JOIN CMS_Enrolment e ON s.StudID = e.StudID
+        GROUP BY s.StudID, s.FirstName, s.LastName
+        HAVING course_count >= %s
+        ORDER BY course_count DESC
+        """
+        cursor.execute(query, (min_courses,))
+        results = cursor.fetchall()
+
+        students = []
+        for sid, fname, lname, count in results:
+            students.append({
+                "StudentID": sid,
+                "FirstName": fname,
+                "LastName": lname,
+                "CourseCount": count
+            })
+
+        cursor.close()
+        db_conn.close()
+        return jsonify(students)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app_views.route('/api/reports/lecturers/min_courses/<int:min_courses>', methods=['GET'])
+@login_required
+@role_required('admin')
+def lecturers_with_min_courses(min_courses):
+    """Return lecturers teaching at least min_courses."""
+    try:
+        db_conn = connectDB()
+        cursor = db_conn.cursor()
+
+        query = """
+        SELECT l.LecID, l.LFirstName, l.LLastname, COUNT(t.CID) AS course_count
+        FROM CMS_Lecturers l
+        JOIN CMS_Teaches t ON l.LecID = t.LecID
+        GROUP BY l.LecID, l.LFirstName, l.LLastname
+        HAVING course_count >= %s
+        ORDER BY course_count DESC
+        """
+        cursor.execute(query, (min_courses,))
+        results = cursor.fetchall()
+
+        lecturers = []
+        for lid, fname, lname, count in results:
+            lecturers.append({
+                "LecturerID": lid,
+                "FirstName": fname,
+                "LastName": lname,
+                "CourseCount": count
+            })
+
+        cursor.close()
+        db_conn.close()
+        return jsonify(lecturers)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app_views.route('/api/reports/courses/most_enrolled', methods=['GET'])
+@login_required
+@role_required('admin')
+def top_10_most_enrolled_courses():
+    """Return top 10 courses by enrollment count."""
+    try:
+        db_conn = connectDB()
+        cursor = db_conn.cursor()
+
+        query = """
+        SELECT c.CID, c.CName, COUNT(e.StudID) AS student_count
+        FROM CMS_Courses c
+        JOIN CMS_Enrolment e ON c.CID = e.CID
+        GROUP BY c.CID, c.CName
+        ORDER BY student_count DESC
+        LIMIT 10
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        courses = []
+        for cid, cname, count in results:
+            courses.append({
+                "CourseID": cid,
+                "CourseName": cname,
+                "StudentCount": count
+            })
+
+        cursor.close()
+        db_conn.close()
+        return jsonify(courses)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app_views.route('/api/reports/students/top_averages', methods=['GET'])
+@login_required
+@role_required('admin')
+def top_10_students_by_average():
+    """Return top 10 students with highest average grade."""
+
+    # Assuming grades are stored as letters or numbers, this requires some normalization.
+    # For this example, let's assume grades are numeric strings. Adjust as needed.
+
+    try:
+        db_conn = connectDB()
+        cursor = db_conn.cursor()
+
+        # Calculate average numeric grade per student, ignoring NULL grades
+        query = """
+        SELECT s.StudID, s.FirstName, s.LastName, AVG(CAST(sub.Grade AS DECIMAL(5,2))) AS avg_grade
+        FROM CMS_Students s
+        JOIN CMS_Submissions sub ON s.StudID = sub.SID
+        WHERE sub.Grade IS NOT NULL AND sub.Grade != ''
+        GROUP BY s.StudID, s.FirstName, s.LastName
+        ORDER BY avg_grade DESC
+        LIMIT 10
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        students = []
+        for sid, fname, lname, avg_grade in results:
+            students.append({
+                "StudentID": sid,
+                "FirstName": fname,
+                "LastName": lname,
+                "AverageGrade": float(avg_grade) if avg_grade is not None else None
+            })
+
+        cursor.close()
+        db_conn.close()
+        return jsonify(students)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

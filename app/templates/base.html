@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}Course Management System{% endblock %}</title>
+    <link href="{{ url_for('static', filename="css/bootstrap.min.css") }}" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename="css/base.css") }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav>
+      <!-- Always show login/register -->
+      <a href="{{ url_for('app_views.login') }}">Login</a>
+      <a href="{{ url_for('app_views.register') }}">Register</a>
+
+      {% if session.get('role') == 'student' %}
+        <a href="{{ url_for('app_views.student_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('app_views.student_courses') }}">My Courses</a>
+        <a href="{{ url_for('app_views.register_course') }}">Register Course</a>
+        <a href="{{ url_for('app_views.submit_assignment') }}">Submit Assignment</a>
+        <a href="{{ url_for('app_views.view_grades') }}">View Grades</a>
+
+      {% elif session.get('role') == 'lecturer' %}
+        <a href="{{ url_for('app_views.lec_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('app_views.lecturer_courses') }}">My Courses</a>
+        <a href="{{ url_for('app_views.create_assignment') }}">Create Assignment</a>
+        <a href="{{ url_for('app_views.grade_assignment') }}">Grade Assignment</a>
+        <a href="{{ url_for('app_views.create_forum') }}">Create Forum</a>
+        <a href="{{ url_for('app_views.create_event') }}">Create Event</a>
+
+      {% elif session.get('role') == 'admin' %}
+        <a href="{{ url_for('app_views.admin_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('app_views.create_course') }}">Create Course</a>
+      {% endif %}
+
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('app_views.logout') }}" class="logout">
+          Logout ({{ session['user_id'] }})
+        </a>
+      {% endif %}
+    </nav>
+
+    <div class="container">
+      {% block content %}
+      <!-- Page-specific content goes here -->
+      {% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Create Forum</h2>
+
+{% include 'flash_messages.html' %}
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div>
+        {{ form.forum_name.label }}<br>
+        {{ form.forum_name(size=50) }}
+    </div>
+
+    <div>
+        {{ form.course.label }}<br>
+        {{ form.course(size=50) }}
+        <small>Example: <code>COMP3161 Database Systems</code></small>
+    </div>
+
+    <div style="margin-top: 1rem;">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+<p><a href="{{ url_for('app_views.lec_dashboard') }}">Back to Dashboard</a></p>
+{% endblock %}
